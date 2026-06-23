@@ -61,23 +61,19 @@ export const generateStaticParams = async () => {
       routing.locales.slice()
     );
   }
-  // Next.js 16 requires at least one result
-  // Return a default param for the root page
-  return [
-    {
-      site: sites[0]?.name || 'default',
-      locale: routing.defaultLocale || scConfig.defaultLanguage,
-      path: [],
-    },
-  ];
+  // No paths pre-rendered at build time; pages are generated on first request (ISR).
+  return [];
 };
 // Metadata fields for the page.
 export const generateMetadata = async ({ params }: PageProps) => {
   const { path, site, locale } = await params;
 
-  // The same call as for rendering the page. Should be cached by default react behavior
-  const page = await client.getPage(path ?? [], { site, locale });
-  return {
-    title: (page?.layout.sitecore.route?.fields as RouteFields)?.Title?.value?.toString() || 'Page',
-  };
+  try {
+    const page = await client.getPage(path ?? [], { site, locale });
+    return {
+      title: (page?.layout.sitecore.route?.fields as RouteFields)?.Title?.value?.toString() || 'Page',
+    };
+  } catch {
+    return { title: 'Page' };
+  }
 };
