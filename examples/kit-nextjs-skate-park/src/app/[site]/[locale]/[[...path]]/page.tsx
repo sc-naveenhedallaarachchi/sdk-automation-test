@@ -34,15 +34,19 @@ export default async function Page({ params, searchParams }: PageProps) {
 
   // Fetch the page data from Sitecore
   let page;
-  if (draft.isEnabled) {
-    const editingParams = await searchParams;
-    if (isDesignLibraryPreviewData(editingParams)) {
-      page = await client.getDesignLibraryData(editingParams);
+  try {
+    if (draft.isEnabled) {
+      const editingParams = await searchParams;
+      if (isDesignLibraryPreviewData(editingParams)) {
+        page = await client.getDesignLibraryData(editingParams);
+      } else {
+        page = await client.getPreview(editingParams);
+      }
     } else {
-      page = await client.getPreview(editingParams);
+      page = cachedPage;
     }
-  } else {
-    page = cachedPage;
+  } catch {
+    page = null;
   }
 
   // If the page is not found, return a 404
@@ -72,7 +76,13 @@ export const generateStaticParams = async () => {
       // Edge may be unavailable at build time (e.g. fresh environment).
     }
   }
-  return [];
+  return [
+    {
+      site: sites[0]?.name || 'default',
+      locale: routing.defaultLocale || scConfig.defaultLanguage,
+      path: [],
+    },
+  ];
 };
 // Metadata fields for the page. Mirrors the Page draft-mode branching so the <title> matches the body.
 export const generateMetadata = async ({ params, searchParams }: PageProps) => {
@@ -81,15 +91,19 @@ export const generateMetadata = async ({ params, searchParams }: PageProps) => {
   const draft = await draftMode();
 
   let page;
-  if (draft.isEnabled) {
-    const editingParams = await searchParams;
-    if (isDesignLibraryPreviewData(editingParams)) {
-      page = await client.getDesignLibraryData(editingParams);
+  try {
+    if (draft.isEnabled) {
+      const editingParams = await searchParams;
+      if (isDesignLibraryPreviewData(editingParams)) {
+        page = await client.getDesignLibraryData(editingParams);
+      } else {
+        page = await client.getPreview(editingParams);
+      }
     } else {
-      page = await client.getPreview(editingParams);
+      page = await getSitecorePage({ site, locale, path: path ?? [] });
     }
-  } else {
-    page = await getSitecorePage({ site, locale, path: path ?? [] });
+  } catch {
+    page = null;
   }
 
   return {
