@@ -38,7 +38,6 @@ export default async function Page({ params }: PageProps) {
     try {
       page = await client.getPage(path ?? [], { site, locale });
     } catch {
-      // Edge may return a 404 when content hasn't been published yet (e.g. fresh project).
       notFound();
     }
   }
@@ -60,18 +59,24 @@ export default async function Page({ params }: PageProps) {
 // This function gets called at build and export time to determine
 // pages for SSG ("paths", as tokenized array).
 export const generateStaticParams = async () => {
+  console.log('Generating static params for all pages...ASASASASASASASASASASASASAS', scConfig);
+  console.log('Generating ENVV...ASASASASASASASASASASASASAS', process.env);
   if (process.env.NODE_ENV !== 'development' && scConfig.generateStaticPaths) {
-    return await client.getAppRouterStaticParams(
-      sites.map((site: SiteInfo) => site.name),
-      routing.locales.slice()
-    );
+    try {
+      return await client.getAppRouterStaticParams(
+        sites.map((site: SiteInfo) => site.name),
+        routing.locales.slice()
+      );
+    } catch {
+      // Edge may be unavailable at build time (e.g. editing host or fresh environment).
+    }
   }
   // Next.js 16 requires at least one result
   // Return a default param for the root page
   return [
     {
       site: sites[0]?.name || 'default',
-      locale: routing.defaultLocale || scConfig.defaultLanguage,
+      locale: routing.defaultLocale || scConfig.defaultLanguage || 'en',
       path: [],
     },
   ];
@@ -80,6 +85,7 @@ export const generateStaticParams = async () => {
 export const generateMetadata = async ({ params }: PageProps) => {
   const { path, site, locale } = await params;
 
+  // The same call as for rendering the page. Should be cached by default react behavior
   try {
     // The same call as for rendering the page. Should be cached by default react behavior
     const page = await client.getPage(path ?? [], { site, locale });
@@ -87,8 +93,6 @@ export const generateMetadata = async ({ params }: PageProps) => {
       title: (page?.layout.sitecore.route?.fields as RouteFields)?.Title?.value?.toString() || 'Page',
     };
   } catch {
-    // Edge may return a 404 when content hasn't been published yet (e.g. fresh project).
-    // Fall back to a default title so the build does not fail.
     return { title: 'Page' };
   }
 };
