@@ -62,15 +62,23 @@ export default async function Page({ params, searchParams }: PageProps) {
 // This function gets called at build and export time to determine
 // pages for SSG ("paths", as tokenized array).
 export const generateStaticParams = async () => {
+  const fallback = [
+    {
+      site: sites[0]?.name || scConfig.defaultSite || 'default',
+      locale: routing.defaultLocale || scConfig.defaultLanguage,
+      path: [] as string[],
+    },
+  ];
   if (process.env.NODE_ENV !== 'development' && scConfig.generateStaticPaths) {
-    return await client.getAppRouterStaticParams(
+    const params = await client.getAppRouterStaticParams(
       sites.map((site: SiteInfo) => site.name),
       routing.locales.slice()
     );
+    if (params.length > 0) {
+      return params;
+    }
   }
-  // Next.js 16 requires at least one result
-  // Return a default param for the root page
-  return [];
+  return fallback;
 };
 // Metadata fields for the page. Mirrors the Page draft-mode branching so the <title> matches the body.
 export const generateMetadata = async ({ params, searchParams }: PageProps) => {
