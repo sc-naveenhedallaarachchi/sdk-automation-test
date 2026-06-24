@@ -1,6 +1,7 @@
 import { collectSitecorePageCacheTags, ErrorPage, type Page } from '@sitecore-content-sdk/nextjs';
 import { cacheTag } from 'next/cache';
 import client from 'src/lib/sitecore-client';
+import { sitecoreFetchFallback } from 'src/lib/cache/sitecore-fetch-fallback';
 
 type GetSitecoreErrorPageParams = {
   site: string;
@@ -16,7 +17,13 @@ export async function getSitecoreErrorPage(params: GetSitecoreErrorPageParams): 
   'use cache';
 
   const { site, locale, code } = params;
-  const page = await client.getErrorPage(code, { site, locale });
+
+  let page: Page | null;
+  try {
+    page = await client.getErrorPage(code, { site, locale });
+  } catch (error) {
+    page = sitecoreFetchFallback(error, null);
+  }
 
   const sitecore = page?.layout?.sitecore;
   const itemPath = sitecore?.context?.itemPath;

@@ -1,6 +1,7 @@
 import { buildSitecoreDictionaryCacheTag, DictionaryPhrases } from '@sitecore-content-sdk/nextjs';
 import { cacheTag } from 'next/cache';
 import client from 'src/lib/sitecore-client';
+import { sitecoreFetchFallback } from 'src/lib/cache/sitecore-fetch-fallback';
 
 type GetSitecoreDictionaryParams = {
   site: string;
@@ -16,5 +17,9 @@ export async function getSitecoreDictionary(params: GetSitecoreDictionaryParams)
   const { site, locale } = params;
   cacheTag(buildSitecoreDictionaryCacheTag({ site, locale }));
 
-  return client.getDictionary({ site, locale });
+  try {
+    return await client.getDictionary({ site, locale });
+  } catch (error) {
+    return sitecoreFetchFallback(error, {});
+  }
 }

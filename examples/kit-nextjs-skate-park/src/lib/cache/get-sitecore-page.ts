@@ -1,6 +1,7 @@
 import { collectSitecorePageCacheTags, Page } from '@sitecore-content-sdk/nextjs';
 import { cacheTag } from 'next/cache';
 import client from 'src/lib/sitecore-client';
+import { sitecoreFetchFallback } from 'src/lib/cache/sitecore-fetch-fallback';
 
 type GetSitecorePageParams = {
   site: string;
@@ -15,7 +16,13 @@ export async function getSitecorePage(params: GetSitecorePageParams): Promise<Pa
   'use cache';
 
   const { site, locale, path } = params;
-  const page = await client.getPage(path, { site, locale });
+
+  let page: Page | null;
+  try {
+    page = await client.getPage(path, { site, locale });
+  } catch (error) {
+    page = sitecoreFetchFallback(error, null);
+  }
 
   const tags = collectSitecorePageCacheTags({
     site,
